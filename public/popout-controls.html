@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SANA game controls</title>
+    <style>
+      :root {
+        --void: #020505;
+        --panel: #071111;
+        --panel-2: #0a1718;
+        --line: #1e4548;
+        --cyan: #6ee7f2;
+        --lime: #a8ff3e;
+        --red: #ff5f56;
+        --text: #dff8f7;
+        --muted: #7ea9ad;
+        --font-mono: "SFMono-Regular", "Roboto Mono", "Cascadia Code", ui-monospace, monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        background: var(--void);
+        color: var(--text);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+      }
+
+      body {
+        background:
+          linear-gradient(rgba(110, 231, 242, 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(110, 231, 242, 0.03) 1px, transparent 1px),
+          linear-gradient(135deg, #030606, #081111 50%, #030506);
+        background-size: 12px 12px, 12px 12px, auto;
+        display: grid;
+        grid-template-rows: 42px auto minmax(0, 1fr);
+      }
+
+      header {
+        align-items: center;
+        background: rgba(5, 13, 14, 0.96);
+        border-bottom: 1px solid rgba(110, 231, 242, 0.28);
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+        min-width: 0;
+        padding: 0 12px;
+      }
+
+      strong,
+      #control-status-line,
+      label,
+      .promptWrap span,
+      button {
+        font-family: var(--font-mono);
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      strong {
+        color: #d9fbfb;
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      #control-status-line {
+        color: var(--muted);
+        font-size: 10px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .controlBar {
+        align-items: center;
+        background:
+          linear-gradient(90deg, rgba(110, 231, 242, 0.08), transparent 50%),
+          rgba(5, 12, 13, 0.94);
+        border-bottom: 1px solid rgba(110, 231, 242, 0.24);
+        display: flex;
+        gap: 8px;
+        min-width: 0;
+        overflow-x: auto;
+        padding: 8px 10px;
+        white-space: nowrap;
+      }
+
+      .controlGroup,
+      #control-presets {
+        align-items: center;
+        display: flex;
+        flex: 0 0 auto;
+        gap: 6px;
+      }
+
+      button,
+      input,
+      textarea {
+        font: inherit;
+      }
+
+      button {
+        align-items: center;
+        background:
+          linear-gradient(180deg, rgba(24, 56, 59, 0.88), rgba(7, 16, 17, 0.92)),
+          var(--panel-2);
+        border: 1px solid var(--line);
+        border-radius: 0;
+        box-shadow:
+          inset 1px 1px 0 rgba(136, 246, 255, 0.15),
+          inset -1px -1px 0 rgba(0, 0, 0, 0.65);
+        color: var(--text);
+        cursor: pointer;
+        display: inline-flex;
+        font-size: 10px;
+        justify-content: center;
+        min-height: 30px;
+        padding: 0 10px;
+      }
+
+      button:hover:not(:disabled) {
+        border-color: var(--cyan);
+        color: #f4ffff;
+      }
+
+      button:active:not(:disabled) {
+        box-shadow:
+          inset 2px 2px 0 rgba(0, 0, 0, 0.68),
+          inset -1px -1px 0 rgba(136, 246, 255, 0.12);
+        transform: translate(1px, 1px);
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+
+      button.active {
+        background:
+          linear-gradient(180deg, rgba(168, 255, 62, 0.32), rgba(19, 39, 14, 0.92));
+        border-color: var(--lime);
+        color: var(--lime);
+      }
+
+      label {
+        align-items: center;
+        color: var(--muted);
+        display: inline-flex;
+        font-size: 10px;
+        gap: 6px;
+      }
+
+      input,
+      textarea {
+        background:
+          linear-gradient(rgba(110, 231, 242, 0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(110, 231, 242, 0.03) 1px, transparent 1px),
+          #040808;
+        background-size: 12px 12px;
+        border: 1px solid var(--line);
+        border-radius: 0;
+        box-shadow:
+          inset 2px 2px 0 rgba(0, 0, 0, 0.72),
+          inset -1px -1px 0 rgba(110, 231, 242, 0.08);
+        color: var(--text);
+        outline: none;
+      }
+
+      input {
+        height: 30px;
+        padding: 0 8px;
+        width: 72px;
+      }
+
+      input:focus,
+      textarea:focus {
+        border-color: var(--cyan);
+      }
+
+      .promptWrap {
+        align-items: stretch;
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+        min-height: 0;
+        padding: 10px 12px 12px;
+      }
+
+      .promptWrap span {
+        color: var(--muted);
+        font-size: 10px;
+        margin-bottom: 6px;
+      }
+
+      textarea {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        height: 100%;
+        line-height: 1.45;
+        min-height: 0;
+        padding: 10px;
+        resize: none;
+        width: 100%;
+      }
+
+      .error {
+        color: var(--red);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>Neon Chunk Controls</strong>
+      <span id="control-status-line"></span>
+    </header>
+    <div class="controlBar">
+      <div class="controlGroup">
+        <button id="control-capture" type="button">Capture Game</button>
+        <button id="control-connect" type="button">Connect SANA</button>
+        <button id="control-start" type="button">Start Stream</button>
+        <button id="control-apply" type="button">Reapply Prompt</button>
+        <button id="control-reset" type="button">Reset</button>
+        <button id="control-disconnect" type="button">Disconnect</button>
+        <button id="control-output" type="button">Detach Output</button>
+      </div>
+      <div class="controlGroup">
+        <label>Seed <input id="control-seed" min="0" type="number" /></label>
+        <label>Anchor <input id="control-anchor" min="0" type="number" /></label>
+      </div>
+      <div id="control-presets"></div>
+    </div>
+    <label class="promptWrap">
+      <span>Raw prompt</span>
+      <textarea id="control-prompt" maxlength="1400"></textarea>
+    </label>
+  </body>
+</html>

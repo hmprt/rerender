@@ -13,7 +13,6 @@ import {
   Play,
   Plus,
   Save,
-  Square,
   Trash2,
 } from "lucide-react";
 
@@ -187,7 +186,12 @@ function readControlPanelWidth() {
 function snapAnchorChunks(value: number) {
   const finiteValue = Number.isFinite(value) ? value : 0;
   const snapped = Math.round(finiteValue / anchorChunkStep) * anchorChunkStep;
-  return Math.min(anchorChunkMax, Math.max(0, snapped));
+  return clampAnchorChunks(snapped);
+}
+
+function clampAnchorChunks(value: number) {
+  const finiteValue = Number.isFinite(value) ? value : 0;
+  return Math.min(anchorChunkMax, Math.max(0, Math.round(finiteValue)));
 }
 
 async function getJwt(apiKey: string) {
@@ -1128,8 +1132,8 @@ export function App() {
   );
 
   const updateAnchorInterval = useCallback(
-    (nextValue: number) => {
-      const nextInterval = snapAnchorChunks(nextValue);
+    (nextValue: number, snap = false) => {
+      const nextInterval = snap ? snapAnchorChunks(nextValue) : clampAnchorChunks(nextValue);
       setAnchorInterval(nextInterval);
       if (statusRef.current === "ready") {
         void modelRef.current
@@ -1584,20 +1588,29 @@ export function App() {
                 value={seed}
               />
             </label>
-            <label className="sliderField">
-              <span>
+            <div className="sliderField anchorField">
+              <label className="anchorNumberField" htmlFor="anchor-chunks-input">
                 <span>Anchor chunks</span>
-                <output>{anchorInterval}</output>
-              </span>
+                <input
+                  id="anchor-chunks-input"
+                  inputMode="numeric"
+                  max={anchorChunkMax}
+                  min={0}
+                  onChange={(event) => updateAnchorInterval(Number(event.target.value))}
+                  type="number"
+                  value={anchorInterval}
+                />
+              </label>
               <input
+                aria-label="Anchor chunks slider"
                 min={0}
                 max={anchorChunkMax}
-                onChange={(event) => updateAnchorInterval(Number(event.target.value))}
+                onChange={(event) => updateAnchorInterval(Number(event.target.value), true)}
                 step={anchorChunkStep}
                 type="range"
                 value={anchorInterval}
               />
-            </label>
+            </div>
           </div>
         </section>
       </aside>
@@ -1657,7 +1670,6 @@ export function App() {
           <video muted playsInline ref={outputVideoRef} />
           {!outputLive && (
             <div className="empty">
-              <Square size={34} />
               <button
                 className="paneAction"
                 disabled={!keyReady || !capturing || action === "busy"}

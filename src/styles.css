@@ -721,7 +721,8 @@ button.panelResizeHandle:active:not(:disabled) {
 }
 
 .seedInputField > span,
-.sliderField > span {
+.sliderField > span,
+.anchorNumberField > span {
   align-items: center;
   color: var(--muted);
   display: flex;
@@ -733,6 +734,16 @@ button.panelResizeHandle:active:not(:disabled) {
   text-transform: uppercase;
 }
 
+.anchorNumberField {
+  display: grid;
+  gap: 6px;
+}
+
+.anchorNumberField > span {
+  justify-content: center;
+  text-align: center;
+}
+
 .seedInputField input {
   color: var(--text);
   font-family: var(--font-mono);
@@ -741,6 +752,17 @@ button.panelResizeHandle:active:not(:disabled) {
   height: 38px;
   letter-spacing: 0;
   padding: 0 10px;
+}
+
+.anchorNumberField input {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 800;
+  height: 36px;
+  letter-spacing: 0;
+  padding: 0 10px;
+  text-align: center;
 }
 
 .sliderField output {

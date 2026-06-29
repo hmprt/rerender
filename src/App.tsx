@@ -9,6 +9,7 @@ import {
   Loader2,
   Maximize2,
   MonitorUp,
+  Palette,
   Play,
   Plus,
   Save,
@@ -33,6 +34,14 @@ type SavedPrompt = {
   prompt: string;
   seed: number;
   updatedAt: number;
+};
+
+type ThemeId = "phosphor-depths" | "signal-magenta" | "amber-glass" | "icefall";
+
+type ThemeOption = {
+  id: ThemeId;
+  label: string;
+  swatches: string[];
 };
 
 type DetachedControlsApi = {
@@ -110,6 +119,7 @@ const xUrl = "https://x.com/npceo_";
 const outputPopoutUrl = "/popout-output.html";
 const controlsPopoutUrl = "/popout-controls.html";
 const controlPanelWidthStorageKey = "rerender.control-panel-width";
+const themeStorageKey = "rerender.theme";
 const minControlPanelWidth = 300;
 const maxControlPanelWidth = 520;
 const minStageWidth = 520;
@@ -126,6 +136,30 @@ const basePromptRecords: SavedPrompt[] = promptPresets.map((preset) => ({
   updatedAt: 0,
 }));
 const basePromptIds = new Set(basePromptRecords.map((preset) => preset.id));
+const themeOptions: ThemeOption[] = [
+  {
+    id: "phosphor-depths",
+    label: "Phosphor Depths",
+    swatches: ["#020505", "#2a6e74", "#6ee7f2", "#a8ff3e"],
+  },
+  {
+    id: "signal-magenta",
+    label: "Signal Magenta",
+    swatches: ["#05040d", "#245070", "#39c7ff", "#ff4fd8"],
+  },
+  {
+    id: "amber-glass",
+    label: "Amber Glass",
+    swatches: ["#070604", "#73522a", "#d09a45", "#ffb02e"],
+  },
+  {
+    id: "icefall",
+    label: "Icefall",
+    swatches: ["#020710", "#1f5b7d", "#4bc8ff", "#ff7a1a"],
+  },
+];
+const defaultThemeId: ThemeId = themeOptions[0].id;
+const themeOptionIds = new Set<ThemeId>(themeOptions.map((theme) => theme.id));
 
 function readSavedPrompts() {
   if (window.localStorage.getItem(savedPromptsSchemaStorageKey) !== savedPromptsSchemaVersion) return [];
@@ -168,6 +202,11 @@ function readDeletedBasePromptIds() {
   } catch {
     return [];
   }
+}
+
+function readThemeId(): ThemeId {
+  const storedTheme = window.localStorage.getItem(themeStorageKey);
+  return themeOptionIds.has(storedTheme as ThemeId) ? (storedTheme as ThemeId) : defaultThemeId;
 }
 
 function makeSavedPromptId() {
@@ -216,6 +255,35 @@ function snapAnchorChunks(value: number) {
 function clampAnchorChunks(value: number) {
   const finiteValue = Number.isFinite(value) ? value : anchorChunkMin;
   return Math.min(anchorChunkMax, Math.max(anchorChunkMin, Math.round(finiteValue)));
+}
+
+function RerenderLogo() {
+  return (
+    <div className="brandLogo" aria-label="rerender.app - Powered by Reactor">
+      <svg aria-hidden="true" className="brandMark" viewBox="0 0 72 72">
+        <g className="brandMarkCube">
+          <polygon className="brandFacet brandFacetTop" points="19 16 37 7 55 16 37 25" />
+          <polygon className="brandFacet brandFacetLeft" points="19 16 37 25 37 50 19 41" />
+          <polygon className="brandFacet brandFacetRight" points="37 25 55 16 55 41 37 50" />
+          <path className="brandWire" d="M19 16v25l18 9 18-9V16L37 7 19 16Zm18 9v25m0-25L55 16m-18 9L19 16" />
+          <path className="brandInnerWire" d="M27 20l10-5 10 5-10 5-10-5Zm0 7 10 5 10-5M27 34l10 5 10-5" />
+        </g>
+        <g className="brandFragments">
+          <rect x="56" y="12" width="4" height="4" />
+          <rect x="61" y="23" width="3" height="3" />
+          <rect x="58" y="35" width="5" height="5" />
+          <rect x="49" y="51" width="4" height="4" />
+          <rect x="13" y="47" width="3" height="3" />
+          <rect x="8" y="35" width="4" height="4" />
+          <rect x="12" y="10" width="3" height="3" />
+        </g>
+      </svg>
+      <div className="brandCopy">
+        <h1>rerender.app</h1>
+        <span className="brandSubtitle">Powered by Reactor</span>
+      </div>
+    </div>
+  );
 }
 
 async function getJwt(apiKey: string) {
@@ -710,6 +778,8 @@ export function App() {
   const [events, setEvents] = useState<string[]>([]);
   const [helpOpen, setHelpOpen] = useState(false);
   const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [themePopoverOpen, setThemePopoverOpen] = useState(false);
+  const [activeTheme, setActiveTheme] = useState<ThemeId>(readThemeId);
   const [savedPrompts, setSavedPrompts] = useState<SavedPrompt[]>(readSavedPrompts);
   const [deletedBasePromptIds, setDeletedBasePromptIds] = useState<string[]>(readDeletedBasePromptIds);
   const [controlPanelWidth, setControlPanelWidth] = useState(readControlPanelWidth);
@@ -727,6 +797,10 @@ export function App() {
   const activePrompt = useMemo(
     () => promptLibrary.find((item) => item.id === activePresetId) ?? null,
     [activePresetId, promptLibrary],
+  );
+  const activeThemeOption = useMemo(
+    () => themeOptions.find((theme) => theme.id === activeTheme) ?? themeOptions[0],
+    [activeTheme],
   );
   const hasPromptChanges = useMemo(() => {
     if (!activePrompt) return false;
@@ -844,6 +918,10 @@ export function App() {
   useEffect(() => {
     window.localStorage.setItem(controlPanelWidthStorageKey, String(controlPanelWidth));
   }, [controlPanelWidth]);
+
+  useEffect(() => {
+    window.localStorage.setItem(themeStorageKey, activeTheme);
+  }, [activeTheme]);
 
   useEffect(() => {
     window.localStorage.setItem(deletedBasePromptsSchemaStorageKey, deletedBasePromptsSchemaVersion);
@@ -1421,13 +1499,54 @@ export function App() {
   const startLabel = action === "busy" ? "Starting Stream" : started ? "Restart Stream" : "Start Stream";
 
   return (
-    <main className="sanaApp" onPointerDownCapture={handleUiPointerDownCapture} style={appStyle}>
+    <main className="sanaApp" data-theme={activeTheme} onPointerDownCapture={handleUiPointerDownCapture} style={appStyle}>
       <header className="labHeader">
         <div className="labBrand">
-          <img className="brandLogo" src="/rerender-logo.svg" alt="rerender.app - Powered by Reactor" />
-          <h1 className="srOnly">rerender.app</h1>
+          <RerenderLogo />
         </div>
         <div className={`headerStatus ${error ? "error" : status}`}>
+          <div className="themeShell">
+            <button
+              aria-expanded={themePopoverOpen}
+              className={`themeTrigger ${themePopoverOpen ? "active" : ""}`}
+              onClick={() => {
+                setThemePopoverOpen((open) => !open);
+                setTutorialOpen(false);
+                setKeyPopoverOpen(false);
+              }}
+              type="button"
+            >
+              <Palette size={14} />
+              Theme
+            </button>
+            {themePopoverOpen && (
+              <section className="themePopover" aria-label="Theme">
+                <h2>Theme</h2>
+                <div className="themeOptions">
+                  {themeOptions.map((theme) => (
+                    <button
+                      aria-pressed={activeTheme === theme.id}
+                      className={activeTheme === theme.id ? "active" : ""}
+                      key={theme.id}
+                      onClick={() => {
+                        setActiveTheme(theme.id);
+                        setThemePopoverOpen(false);
+                      }}
+                      type="button"
+                    >
+                      <span className="themeSwatches" aria-hidden="true">
+                        {theme.swatches.map((swatch) => (
+                          <span key={swatch} style={{ background: swatch }} />
+                        ))}
+                      </span>
+                      <span>{theme.label}</span>
+                    </button>
+                  ))}
+                </div>
+                <p>{activeThemeOption.label}</p>
+              </section>
+            )}
+          </div>
           <div className="tutorialShell">
             <button
               aria-expanded={tutorialOpen}
@@ -1435,6 +1554,7 @@ export function App() {
               onClick={() => {
                 setTutorialOpen((open) => !open);
                 setKeyPopoverOpen(false);
+                setThemePopoverOpen(false);
               }}
               type="button"
             >
@@ -1477,6 +1597,7 @@ export function App() {
             onClick={() => {
               setKeyPopoverOpen((open) => !open);
               setTutorialOpen(false);
+              setThemePopoverOpen(false);
             }}
             type="button"
           >

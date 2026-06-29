@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Rerender icon</title>
+  <desc id="desc">A fragmented neon cube for Rerender.</desc>
+  <defs>
+    <linearGradient id="panel" x1="62" x2="448" y1="48" y2="464" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#08242a"/>
+      <stop offset="1" stop-color="#020808"/>
+    </linearGradient>
+    <linearGradient id="cyan" x1="92" x2="374" y1="90" y2="358" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8ffff8"/>
+      <stop offset=".54" stop-color="#39d6e5"/>
+      <stop offset="1" stop-color="#17788f"/>
+    </linearGradient>
+    <linearGradient id="lime" x1="348" x2="440" y1="292" y2="400" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#dcff7d"/>
+      <stop offset="1" stop-color="#8bd42d"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="0" stdDeviation="9" flood-color="#63e7f2" flood-opacity=".46"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="16" flood-color="#c7f43d" flood-opacity=".18"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="url(#panel)"/>
+  <path d="M48 48h204v16H64v166H48V48Zm416 416H260v-16h188V282h16v182Z" fill="#6ee7f2" opacity=".5"/>
+  <g opacity=".28">
+    <path d="M0 64h512M0 128h512M0 192h512M0 256h512M0 320h512M0 384h512M0 448h512" stroke="#6ee7f2" stroke-width="1"/>
+    <path d="M64 0v512M128 0v512M192 0v512M256 0v512M320 0v512M384 0v512M448 0v512" stroke="#6ee7f2" stroke-width="1"/>
+  </g>
+  <g filter="url(#glow)" stroke="#0b2f35" stroke-width="4" stroke-linejoin="round">
+    <path d="M137 145 253 92l113 54-114 58-115-59Z" fill="url(#cyan)"/>
+    <path d="M137 145v140l115 67V204L137 145Z" fill="#176278"/>
+    <path d="M366 146v139l-114 67V204l114-58Z" fill="#0b3f50"/>
+    <path d="m181 166 115-55M221 187l115-58M137 210l115 64M137 257l115 66M252 204v148M307 176v143M196 175v144" fill="none" stroke="#98ffff" stroke-width="8" opacity=".7"/>
+    <path d="M344 330h63v63h-63z" fill="url(#lime)" stroke="#c7f43d"/>
+    <path d="M384 284h35v35h-35zM421 236h22v22h-22zM355 220h18v18h-18zM405 178h14v14h-14z" fill="#c7f43d" stroke="none"/>
+    <path d="M111 317h18v18h-18zM82 269h13v13H82zM104 104h13v13h-13z" fill="#6ee7f2" stroke="none"/>
+  </g>
+</svg>

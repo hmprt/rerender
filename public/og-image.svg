@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Rerender</title>
+  <desc id="desc">Rerender social preview card.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1200" y1="0" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#020909"/>
+      <stop offset=".56" stop-color="#061113"/>
+      <stop offset="1" stop-color="#010404"/>
+    </linearGradient>
+    <linearGradient id="word" x1="422" x2="1030" y1="200" y2="298" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f3ffff"/>
+      <stop offset=".55" stop-color="#b8e6ea"/>
+      <stop offset="1" stop-color="#75bdc8"/>
+    </linearGradient>
+    <linearGradient id="cubeTop" x1="108" x2="346" y1="132" y2="234" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#baffff"/>
+      <stop offset=".55" stop-color="#45dbe8"/>
+      <stop offset="1" stop-color="#1b8498"/>
+    </linearGradient>
+    <linearGradient id="lime" x1="314" x2="418" y1="340" y2="454" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#dcff7d"/>
+      <stop offset="1" stop-color="#8bd42d"/>
+    </linearGradient>
+    <filter id="cyanGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="0" stdDeviation="7" flood-color="#6ee7f2" flood-opacity=".42"/>
+    </filter>
+    <filter id="limeGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#c7f43d" flood-opacity=".62"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <g opacity=".22">
+    <path d="M0 45h1200M0 90h1200M0 135h1200M0 180h1200M0 225h1200M0 270h1200M0 315h1200M0 360h1200M0 405h1200M0 450h1200M0 495h1200M0 540h1200M0 585h1200" stroke="#6ee7f2" stroke-width="1"/>
+    <path d="M45 0v630M90 0v630M135 0v630M180 0v630M225 0v630M270 0v630M315 0v630M360 0v630M405 0v630M450 0v630M495 0v630M540 0v630M585 0v630M630 0v630M675 0v630M720 0v630M765 0v630M810 0v630M855 0v630M900 0v630M945 0v630M990 0v630M1035 0v630M1080 0v630M1125 0v630" stroke="#6ee7f2" stroke-width="1"/>
+  </g>
+  <path d="M48 52h308v18H66v180H48V52Zm1104 526H844v-18h290V380h18v198Z" fill="#6ee7f2" opacity=".46"/>
+  <path d="M70 508h1060" stroke="#17464c" stroke-width="2"/>
+  <path d="M70 518h220M918 518h212" stroke="#6ee7f2" stroke-width="4" opacity=".48"/>
+  <path d="M1030 88h72v11h-72zM1116 88h18v11h-18zM1070 110h46v8h-46z" fill="#6ee7f2" opacity=".55"/>
+
+  <g filter="url(#cyanGlow)" stroke="#092c33" stroke-width="5" stroke-linejoin="round" transform="translate(72 58)">
+    <path d="M68 134 204 70l134 66-135 68L68 134Z" fill="url(#cubeTop)"/>
+    <path d="M68 134v166l135 79V204L68 134Z" fill="#176278"/>
+    <path d="M338 136v164l-135 79V204l135-68Z" fill="#0b3f50"/>
+    <path d="m119 158 136-66M166 183l136-68M68 210l135 75M68 266l135 78M203 204v175M268 172v168M137 170v168" fill="none" stroke="#98ffff" stroke-width="9" opacity=".72"/>
+    <path d="M266 358h58v58h-58z" fill="url(#lime)" stroke="#c7f43d"/>
+    <path d="M318 306h32v32h-32zM356 250h22v22h-22zM286 232h18v18h-18zM338 184h15v15h-15z" fill="#c7f43d" stroke="none"/>
+  </g>
+
+  <g>
+    <text x="450" y="254" fill="url(#word)" font-family="SFMono-Regular, Roboto Mono, Cascadia Code, Menlo, ui-monospace, monospace" font-size="82" font-weight="900" letter-spacing="2.5" paint-order="stroke fill" stroke="#061516" stroke-width="2">rerender.app</text>
+    <text x="456" y="314" fill="#c7f43d" font-family="SFMono-Regular, Roboto Mono, Cascadia Code, Menlo, ui-monospace, monospace" font-size="30" font-weight="900" letter-spacing="2.2" filter="url(#limeGlow)">Powered by Reactor</text>
+    <text x="456" y="394" fill="#d9f8f8" font-family="SFMono-Regular, Roboto Mono, Cascadia Code, Menlo, ui-monospace, monospace" font-size="27" font-weight="700" letter-spacing=".5">Real-time style transfer for game streams.</text>
+    <text x="456" y="440" fill="#87b8bd" font-family="SFMono-Regular, Roboto Mono, Cascadia Code, Menlo, ui-monospace, monospace" font-size="22" font-weight="700" letter-spacing=".6">Capture a game. Write a style. Rerender live.</text>
+  </g>
+</svg>

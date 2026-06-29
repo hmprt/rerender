@@ -744,7 +744,7 @@ button.panelResizeHandle:active:not(:disabled) {
 .libraryActions {
   display: grid;
   gap: 5px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .libraryActions button {
@@ -753,11 +753,15 @@ button.panelResizeHandle:active:not(:disabled) {
   padding: 0 6px;
 }
 
+.libraryActions .savePromptButton {
+  grid-column: 1 / -1;
+}
+
 .promptActions {
   align-items: center;
-  display: grid;
-  gap: 8px;
-  grid-template-columns: minmax(0, 1fr) minmax(112px, auto);
+  display: flex;
+  justify-content: flex-start;
+  min-height: 20px;
 }
 
 .promptActions span {

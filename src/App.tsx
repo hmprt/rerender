@@ -9,10 +9,10 @@ import {
   Loader2,
   Maximize2,
   MonitorUp,
-  Pencil,
   Play,
   Plus,
   Save,
+  Copy,
   Trash2,
 } from "lucide-react";
 
@@ -173,6 +173,28 @@ function readDeletedBasePromptIds() {
 function makeSavedPromptId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
   return `prompt-${Date.now()}`;
+}
+
+function getNextNewPromptName(prompts: SavedPrompt[]) {
+  const nextNumber =
+    prompts.reduce((max, promptRecord) => {
+      const match = /^New Prompt #(\d+)$/i.exec(promptRecord.name.trim());
+      return match ? Math.max(max, Number(match[1])) : max;
+    }, 0) + 1;
+  return `New Prompt #${nextNumber}`;
+}
+
+function getDuplicatePromptName(baseName: string, prompts: SavedPrompt[]) {
+  const cleanBaseName = baseName.trim() || "Untitled Prompt";
+  const firstCopyName = `${cleanBaseName} Copy`;
+  const promptNames = new Set(prompts.map((promptRecord) => promptRecord.name));
+  if (!promptNames.has(firstCopyName)) return firstCopyName;
+
+  let copyNumber = 2;
+  while (promptNames.has(`${firstCopyName} ${copyNumber}`)) {
+    copyNumber += 1;
+  }
+  return `${firstCopyName} ${copyNumber}`;
 }
 
 function clampControlPanelWidth(width: number, viewportWidth = window.innerWidth) {
@@ -706,6 +728,15 @@ export function App() {
     () => promptLibrary.find((item) => item.id === activePresetId) ?? null,
     [activePresetId, promptLibrary],
   );
+  const hasPromptChanges = useMemo(() => {
+    if (!activePrompt) return false;
+    return (
+      promptName.trim() !== activePrompt.name ||
+      prompt !== activePrompt.prompt ||
+      seed !== activePrompt.seed ||
+      anchorInterval !== activePrompt.anchorInterval
+    );
+  }, [activePrompt, anchorInterval, prompt, promptName, seed]);
   const promptChoices = useMemo<PromptPreset[]>(
     () =>
       promptLibrary.map((item) => ({
@@ -1200,9 +1231,27 @@ export function App() {
 
   const createPrompt = useCallback(() => {
     const id = makeSavedPromptId();
-    const baseName = promptName.trim() || activePrompt?.name || "Untitled Prompt";
-    const name = `${baseName} Copy`;
+    const name = getNextNewPromptName(promptLibrary);
     const nextSavedPrompt: SavedPrompt = {
+      anchorInterval,
+      id,
+      name,
+      prompt: "",
+      seed,
+      updatedAt: Date.now(),
+    };
+
+    setSavedPrompts((items) => [nextSavedPrompt, ...items].slice(0, 50));
+    setActivePresetId(id);
+    setPromptName(name);
+    updatePrompt("", id, "new prompt started");
+    addEvent("prompt created");
+  }, [addEvent, anchorInterval, promptLibrary, seed, updatePrompt]);
+
+  const duplicatePrompt = useCallback(() => {
+    const id = makeSavedPromptId();
+    const name = getDuplicatePromptName(promptName.trim() || activePrompt?.name || "Untitled Prompt", promptLibrary);
+    const duplicatedPrompt: SavedPrompt = {
       anchorInterval,
       id,
       name,
@@ -1211,33 +1260,11 @@ export function App() {
       updatedAt: Date.now(),
     };
 
-    setSavedPrompts((items) => [nextSavedPrompt, ...items].slice(0, 50));
+    setSavedPrompts((items) => [duplicatedPrompt, ...items].slice(0, 50));
     setActivePresetId(id);
     setPromptName(name);
-    addEvent("prompt created");
-  }, [activePrompt, addEvent, anchorInterval, prompt, promptName, seed]);
-
-  const renamePrompt = useCallback(() => {
-    if (!activePrompt) return;
-    const name = promptName.trim();
-    if (!name) return;
-    const renamedPrompt: SavedPrompt = {
-      anchorInterval,
-      id: activePrompt.id,
-      name,
-      prompt,
-      seed,
-      updatedAt: Date.now(),
-    };
-
-    setSavedPrompts((items) => {
-      const withoutCurrent = items.filter((item) => item.id !== activePrompt.id);
-      return basePromptIds.has(activePrompt.id) ? [...withoutCurrent, renamedPrompt] : [renamedPrompt, ...withoutCurrent];
-    });
-    setDeletedBasePromptIds((ids) => ids.filter((item) => item !== activePrompt.id));
-    setPromptName(name);
-    addEvent("prompt renamed");
-  }, [activePrompt, addEvent, anchorInterval, prompt, promptName, seed]);
+    addEvent("prompt duplicated");
+  }, [activePrompt, addEvent, anchorInterval, prompt, promptLibrary, promptName, seed]);
 
   const deletePrompt = useCallback(() => {
     if (!activePrompt) return;
@@ -1573,17 +1600,17 @@ export function App() {
               />
             </label>
             <div className="libraryActions">
-              <button disabled={!prompt.trim()} onClick={saveCurrentPrompt} type="button">
+              <button className="savePromptButton" disabled={!prompt.trim() || !promptName.trim()} onClick={saveCurrentPrompt} type="button">
                 <Save size={14} />
-                Save
+                {hasPromptChanges ? "Save Changes" : "Save"}
               </button>
-              <button disabled={!prompt.trim()} onClick={createPrompt} type="button">
+              <button onClick={createPrompt} type="button">
                 <Plus size={14} />
                 New
               </button>
-              <button disabled={!activePrompt || !promptName.trim()} onClick={renamePrompt} type="button">
-                <Pencil size={14} />
-                Rename
+              <button disabled={!prompt.trim()} onClick={duplicatePrompt} type="button">
+                <Copy size={14} />
+                Duplicate
               </button>
               <button disabled={!activePrompt} onClick={deletePrompt} type="button">
                 <Trash2 size={14} />
@@ -1603,9 +1630,6 @@ export function App() {
           </label>
           <div className="promptActions">
             <span>{promptUsage}</span>
-            <button disabled={status !== "ready"} onClick={() => void applyPrompt(prompt, "prompt reapplied", true)} type="button">
-              Apply Style
-            </button>
           </div>
         </section>
 

@@ -105,6 +105,7 @@ const normalizedInputHeight = 720;
 const normalizedInputFps = 30;
 const reactorKeyUrl = "https://www.reactor.inc/dashboard";
 const githubUrl = "https://github.com/hmprt/rerender";
+const psRemotePlayUrl = "https://www.playstation.com/en-us/remote-play/";
 const xUrl = "https://x.com/npceo_";
 const outputPopoutUrl = "/popout-output.html";
 const controlsPopoutUrl = "/popout-controls.html";
@@ -685,6 +686,7 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [events, setEvents] = useState<string[]>([]);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
   const [savedPrompts, setSavedPrompts] = useState<SavedPrompt[]>(readSavedPrompts);
   const [deletedBasePromptIds, setDeletedBasePromptIds] = useState<string[]>(readDeletedBasePromptIds);
   const [controlPanelWidth, setControlPanelWidth] = useState(readControlPanelWidth);
@@ -1398,6 +1400,35 @@ export function App() {
           <h1 className="srOnly">rerender.app</h1>
         </div>
         <div className={`headerStatus ${error ? "error" : status}`}>
+          <div className="tutorialShell">
+            <button
+              aria-expanded={tutorialOpen}
+              className={`tutorialTab ${tutorialOpen ? "active" : ""}`}
+              onClick={() => {
+                setTutorialOpen((open) => !open);
+                setKeyPopoverOpen(false);
+              }}
+              type="button"
+            >
+              Tutorial
+            </button>
+            {tutorialOpen && (
+              <section className="tutorialPopover" aria-label="Tutorial">
+                <h2>Quick Start</h2>
+                <ol>
+                  <li>Add a Reactor key.</li>
+                  <li>Select a game, capture card, OBS, or Remote Play window.</li>
+                  <li>Choose a style prompt, then set seed and anchor chunks.</li>
+                  <li>Start the stream and keep the source window visible.</li>
+                </ol>
+                <p>PlayStation users can run the console feed through Sony's Remote Play app.</p>
+                <a href={psRemotePlayUrl} rel="noreferrer" target="_blank">
+                  <ExternalLink size={15} />
+                  Download PS Remote Play
+                </a>
+              </section>
+            )}
+          </div>
           <nav className="socialLinks" aria-label="Project links">
             <a aria-label="Open Rerender on GitHub" className="iconLink" href={githubUrl} rel="noreferrer" target="_blank">
               <Github size={15} />
@@ -1415,7 +1446,10 @@ export function App() {
           <button
             aria-expanded={keyPopoverOpen}
             className={`keyTrigger ${keyReady ? "keyReady" : "keyMissing"}`}
-            onClick={() => setKeyPopoverOpen((open) => !open)}
+            onClick={() => {
+              setKeyPopoverOpen((open) => !open);
+              setTutorialOpen(false);
+            }}
             type="button"
           >
             <KeyRound size={14} />

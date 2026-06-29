@@ -114,7 +114,8 @@ const minControlPanelWidth = 300;
 const maxControlPanelWidth = 520;
 const minStageWidth = 520;
 const maxSeed = 999_999_999;
-const anchorChunkStep = 4;
+const anchorChunkMin = 1;
+const anchorChunkStep = 1;
 const anchorChunkMax = 96;
 const basePromptRecords: SavedPrompt[] = promptPresets.map((preset) => ({
   anchorInterval: preset.anchorInterval,
@@ -185,14 +186,14 @@ function readControlPanelWidth() {
 }
 
 function snapAnchorChunks(value: number) {
-  const finiteValue = Number.isFinite(value) ? value : 0;
-  const snapped = Math.round(finiteValue / anchorChunkStep) * anchorChunkStep;
+  const finiteValue = Number.isFinite(value) ? value : anchorChunkMin;
+  const snapped = Math.round((finiteValue - anchorChunkMin) / anchorChunkStep) * anchorChunkStep + anchorChunkMin;
   return clampAnchorChunks(snapped);
 }
 
 function clampAnchorChunks(value: number) {
-  const finiteValue = Number.isFinite(value) ? value : 0;
-  return Math.min(anchorChunkMax, Math.max(0, Math.round(finiteValue)));
+  const finiteValue = Number.isFinite(value) ? value : anchorChunkMin;
+  return Math.min(anchorChunkMax, Math.max(anchorChunkMin, Math.round(finiteValue)));
 }
 
 async function getJwt(apiKey: string) {
@@ -495,7 +496,7 @@ function writeDetachedControlsWindow(detachedWindow: Window) {
           </div>
           <div class="controlGroup">
             <label>Seed <input id="control-seed" min="0" type="number" /></label>
-            <label>Anchor <input id="control-anchor" min="0" type="number" /></label>
+            <label>Anchor <input id="control-anchor" min="${anchorChunkMin}" type="number" /></label>
           </div>
           <div id="control-presets"></div>
         </div>
@@ -1629,7 +1630,7 @@ export function App() {
                   id="anchor-chunks-input"
                   inputMode="numeric"
                   max={anchorChunkMax}
-                  min={0}
+                  min={anchorChunkMin}
                   onChange={(event) => updateAnchorInterval(Number(event.target.value))}
                   type="number"
                   value={anchorInterval}
@@ -1637,7 +1638,7 @@ export function App() {
               </label>
               <input
                 aria-label="Anchor chunks slider"
-                min={0}
+                min={anchorChunkMin}
                 max={anchorChunkMax}
                 onChange={(event) => updateAnchorInterval(Number(event.target.value), true)}
                 step={anchorChunkStep}

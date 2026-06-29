@@ -36,6 +36,11 @@ body {
   margin: 0;
 }
 
+body.resizingControlPanel {
+  cursor: col-resize;
+  user-select: none;
+}
+
 button,
 input,
 textarea,
@@ -136,9 +141,9 @@ select:focus {
   color: var(--text);
   display: grid;
   grid-template-areas:
-    "header header"
-    "controls stage";
-  grid-template-columns: 348px minmax(0, 1fr);
+    "header header header"
+    "controls resize stage";
+  grid-template-columns: var(--control-panel-width, 348px) 12px minmax(0, 1fr);
   grid-template-rows: 62px minmax(0, 1fr);
   height: 100vh;
   min-width: 0;
@@ -160,6 +165,7 @@ select:focus {
 
 .labHeader,
 .controlPanel,
+.panelResizeHandle,
 .stage {
   position: relative;
   z-index: 1;
@@ -171,18 +177,37 @@ select:focus {
   display: grid;
   gap: 8px;
   grid-area: header;
-  grid-template-columns: 300px minmax(220px, 1fr);
+  grid-template-columns: 360px minmax(220px, 1fr);
   min-width: 0;
-  padding: 7px 14px 6px;
+  padding: 2px 14px;
   z-index: 4;
 }
 
 .labBrand {
   align-items: center;
   display: grid;
-  gap: 10px;
-  grid-template-columns: 38px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   min-width: 0;
+}
+
+.brandLogo {
+  display: block;
+  filter: drop-shadow(0 0 10px rgba(110, 231, 242, 0.22));
+  height: 58px;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: left center;
+  width: 360px;
+}
+
+.srOnly {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }
 
 .labMark {
@@ -244,6 +269,28 @@ select:focus {
   position: relative;
 }
 
+.socialLinks {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.iconLink {
+  color: var(--cyan);
+  min-height: 32px;
+  padding: 0;
+  width: 34px;
+}
+
+.xIconLink {
+  color: var(--lime);
+}
+
+.xLogo {
+  display: block;
+  height: 13px;
+  width: 13px;
+}
+
 .keyTrigger {
   color: var(--cyan);
   min-height: 32px;
@@ -256,6 +303,14 @@ select:focus {
 
 .headerStatus.ready .keyTrigger {
   color: var(--lime);
+}
+
+.headerStatus .keyTrigger.keyReady {
+  color: var(--lime);
+}
+
+.headerStatus .keyTrigger.keyMissing {
+  color: var(--red);
 }
 
 .keyPopover {
@@ -305,6 +360,73 @@ select:focus {
   padding: 10px 12px;
 }
 
+.panelResizeHandle {
+  align-self: stretch;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  cursor: col-resize;
+  display: block;
+  grid-area: resize;
+  justify-self: stretch;
+  margin: 6px 0;
+  min-height: 0;
+  min-width: 12px;
+  padding: 0;
+  width: 12px;
+  z-index: 3;
+}
+
+button.panelResizeHandle:hover,
+button.panelResizeHandle:focus-visible {
+  background: rgba(110, 231, 242, 0.06);
+  border: 0;
+  box-shadow: none;
+  outline: none;
+}
+
+button.panelResizeHandle:active:not(:disabled) {
+  box-shadow: none;
+  transform: none;
+}
+
+.panelResizeHandle span {
+  background:
+    repeating-linear-gradient(0deg, var(--lime) 0 5px, transparent 5px 10px),
+    linear-gradient(180deg, rgba(110, 231, 242, 0.12), rgba(110, 231, 242, 0.02));
+  border-left: 1px solid rgba(110, 231, 242, 0.58);
+  border-right: 1px solid rgba(110, 231, 242, 0.24);
+  box-shadow:
+    0 0 10px rgba(110, 231, 242, 0.22),
+    2px 0 0 rgba(0, 0, 0, 0.45);
+  display: block;
+  height: min(188px, calc(100% - 52px));
+  left: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+}
+
+.panelResizeHandle::before,
+.panelResizeHandle::after {
+  background: rgba(110, 231, 242, 0.48);
+  content: "";
+  height: 34px;
+  left: 50%;
+  position: absolute;
+  transform: translateX(-50%);
+  width: 1px;
+}
+
+.panelResizeHandle::before {
+  top: 14px;
+}
+
+.panelResizeHandle::after {
+  bottom: 14px;
+}
+
 .panelBlock {
   display: grid;
   gap: 4px;
@@ -314,6 +436,61 @@ select:focus {
 
 .panelBlock h2 {
   color: #a9d4d7;
+  margin: 0;
+}
+
+.blockTitleRow {
+  align-items: start;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  position: relative;
+}
+
+.helpTrigger {
+  color: var(--lime);
+  font-size: 9px;
+  min-height: 24px;
+  padding: 0 8px;
+}
+
+.helpPopover {
+  background:
+    linear-gradient(90deg, rgba(110, 231, 242, 0.12), transparent 42%),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 4px),
+    linear-gradient(rgba(110, 231, 242, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(110, 231, 242, 0.03) 1px, transparent 1px),
+    rgba(4, 13, 14, 0.99);
+  background-size: auto, auto, 12px 12px, 12px 12px, auto;
+  border: 2px solid var(--edge-strong);
+  box-shadow:
+    inset 2px 2px 0 rgba(154, 249, 255, 0.14),
+    inset -3px -3px 0 rgba(0, 0, 0, 0.72),
+    4px 4px 0 rgba(0, 0, 0, 0.58),
+    0 18px 40px rgba(0, 0, 0, 0.52);
+  color: var(--text);
+  display: grid;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  gap: 8px;
+  grid-column: 1 / -1;
+  line-height: 1.45;
+  padding: 10px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 7px);
+  width: min(318px, calc(100vw - 44px));
+  z-index: 8;
+}
+
+.helpPopover strong {
+  color: var(--lime);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.helpPopover p {
   margin: 0;
 }
 
@@ -436,6 +613,73 @@ select:focus {
   resize: vertical;
 }
 
+.promptLibrary {
+  background:
+    linear-gradient(180deg, rgba(11, 30, 32, 0.68), rgba(3, 8, 9, 0.7)),
+    repeating-linear-gradient(90deg, rgba(110, 231, 242, 0.025) 0 1px, transparent 1px 16px);
+  border: 1px solid rgba(58, 135, 142, 0.52);
+  box-shadow:
+    inset 2px 2px 0 rgba(154, 249, 255, 0.08),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.5);
+  display: grid;
+  gap: 5px;
+  padding: 7px;
+}
+
+.libraryTopline {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.libraryTopline span {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.libraryTopline span:last-child {
+  color: var(--lime);
+}
+
+.promptLibrary input,
+.promptLibrary select {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  height: 30px;
+  letter-spacing: 0.08em;
+  min-width: 0;
+  padding: 0 8px;
+  text-transform: uppercase;
+  width: 100%;
+}
+
+.libraryField {
+  gap: 3px;
+}
+
+.promptLibrary input {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.libraryActions {
+  display: grid;
+  gap: 5px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.libraryActions button {
+  font-size: 9px;
+  min-height: 28px;
+  padding: 0 6px;
+}
+
 .promptActions {
   align-items: center;
   display: grid;
@@ -455,6 +699,107 @@ select:focus {
 .settingsBlock {
   border-top: 1px solid rgba(110, 231, 242, 0.18);
   padding-top: 9px;
+}
+
+.sliderStack {
+  display: grid;
+  gap: 8px;
+}
+
+.seedInputField,
+.sliderField {
+  background:
+    linear-gradient(180deg, rgba(15, 42, 45, 0.74), rgba(4, 11, 12, 0.78)),
+    repeating-linear-gradient(90deg, rgba(110, 231, 242, 0.026) 0 1px, transparent 1px 12px);
+  border: 1px solid rgba(58, 135, 142, 0.62);
+  box-shadow:
+    inset 2px 2px 0 rgba(154, 249, 255, 0.1),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.58);
+  display: grid;
+  gap: 6px;
+  padding: 7px;
+}
+
+.seedInputField > span,
+.sliderField > span {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 800;
+  justify-content: space-between;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.seedInputField input {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 800;
+  height: 38px;
+  letter-spacing: 0;
+  padding: 0 10px;
+}
+
+.sliderField output {
+  color: var(--text);
+  font-size: 17px;
+  letter-spacing: 0;
+}
+
+input[type="range"] {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  cursor: pointer;
+  height: 22px;
+  padding: 0;
+  width: 100%;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  background:
+    repeating-linear-gradient(90deg, rgba(168, 255, 62, 0.68) 0 8px, transparent 8px 13px),
+    linear-gradient(180deg, rgba(18, 47, 50, 0.95), rgba(3, 9, 10, 0.98));
+  border: 1px solid rgba(110, 231, 242, 0.6);
+  box-shadow:
+    inset 2px 2px 0 rgba(0, 0, 0, 0.55),
+    inset -1px -1px 0 rgba(154, 249, 255, 0.12);
+  height: 12px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  background:
+    linear-gradient(135deg, #d8ff7b 0 48%, #86c92c 49%),
+    var(--lime);
+  border: 1px solid #d8ff7b;
+  box-shadow:
+    0 0 10px rgba(168, 255, 62, 0.58),
+    2px 2px 0 rgba(0, 0, 0, 0.7);
+  height: 22px;
+  margin-top: -6px;
+  width: 18px;
+}
+
+input[type="range"]::-moz-range-track {
+  background:
+    repeating-linear-gradient(90deg, rgba(168, 255, 62, 0.68) 0 8px, transparent 8px 13px),
+    linear-gradient(180deg, rgba(18, 47, 50, 0.95), rgba(3, 9, 10, 0.98));
+  border: 1px solid rgba(110, 231, 242, 0.6);
+  height: 12px;
+}
+
+input[type="range"]::-moz-range-thumb {
+  background: var(--lime);
+  border: 1px solid #d8ff7b;
+  border-radius: 0;
+  box-shadow: 0 0 10px rgba(168, 255, 62, 0.58);
+  height: 22px;
+  width: 18px;
 }
 
 .compactActions {
@@ -490,11 +835,10 @@ select:focus {
     linear-gradient(135deg, #010303 0, #040909 48%, #010303 100%);
   background-size: auto, auto, 16px 16px, 16px 16px, auto;
   border: 2px solid rgba(58, 135, 142, 0.78);
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
   box-shadow:
     inset 2px 2px 0 rgba(154, 249, 255, 0.16),
     inset -4px -4px 0 rgba(0, 0, 0, 0.72),
-    inset 18px 0 0 rgba(110, 231, 242, 0.035),
-    inset -32px 0 0 rgba(110, 231, 242, 0.06),
     5px 5px 0 rgba(0, 0, 0, 0.46),
     0 0 24px rgba(0, 0, 0, 0.34);
   display: grid;
@@ -504,50 +848,30 @@ select:focus {
   position: relative;
 }
 
-.previewPane::before,
-.previewPane::after {
+.previewPane::before {
+  background:
+    linear-gradient(135deg, transparent 0 10px, rgba(110, 231, 242, 0.9) 10px 12px, transparent 12px) top right / 34px 34px no-repeat,
+    linear-gradient(315deg, transparent 0 10px, rgba(110, 231, 242, 0.76) 10px 12px, transparent 12px) bottom left / 34px 34px no-repeat,
+    linear-gradient(90deg, transparent, rgba(110, 231, 242, 0.5) 18%, rgba(110, 231, 242, 0.12) 18% 52%, transparent 52%) top 7px right 70px / 170px 2px no-repeat,
+    repeating-linear-gradient(90deg, rgba(110, 231, 242, 0.44) 0 7px, transparent 7px 13px) top 13px right 22px / 70px 4px no-repeat,
+    repeating-linear-gradient(90deg, rgba(110, 231, 242, 0.38) 0 8px, transparent 8px 14px) bottom 7px right 52px / 104px 4px no-repeat,
+    linear-gradient(90deg, rgba(110, 231, 242, 0.48), transparent) bottom 7px left 44px / 150px 2px no-repeat;
   content: "";
+  inset: 0;
+  opacity: 0.75;
+  pointer-events: none;
+  position: absolute;
+  z-index: 3;
+}
+
+.previewPane::after {
+  border: 1px solid rgba(110, 231, 242, 0.2);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 0);
+  content: "";
+  inset: 52px 14px 10px;
   pointer-events: none;
   position: absolute;
   z-index: 2;
-}
-
-.previewPane::before {
-  background:
-    linear-gradient(90deg, rgba(0, 0, 0, 0.6), transparent 22%),
-    repeating-linear-gradient(
-      0deg,
-      rgba(110, 231, 242, 0.34) 0 20px,
-      rgba(110, 231, 242, 0.14) 20px 23px,
-      transparent 23px 34px
-    );
-  bottom: 12px;
-  box-shadow:
-    inset 2px 0 0 rgba(154, 249, 255, 0.14),
-    inset -3px 0 0 rgba(0, 0, 0, 0.66);
-  opacity: 0.72;
-  right: 10px;
-  top: 42px;
-  width: 22px;
-}
-
-.previewPane::after {
-  background:
-    linear-gradient(180deg, rgba(154, 249, 255, 0.12), rgba(0, 0, 0, 0.35)),
-    repeating-linear-gradient(
-      90deg,
-      rgba(110, 231, 242, 0.24) 0 72px,
-      rgba(110, 231, 242, 0.09) 72px 76px,
-      transparent 76px 92px
-    );
-  bottom: 10px;
-  box-shadow:
-    inset 0 2px 0 rgba(154, 249, 255, 0.12),
-    inset 0 -3px 0 rgba(0, 0, 0, 0.58);
-  height: 18px;
-  left: 28px;
-  opacity: 0.68;
-  right: 42px;
 }
 
 .previewPane > span {
@@ -564,7 +888,9 @@ select:focus {
   display: flex;
   gap: 10px;
   justify-content: space-between;
+  position: relative;
   padding: 0 10px 0 20px;
+  z-index: 4;
 }
 
 .previewPane > span > span:first-child {
@@ -656,11 +982,11 @@ select:focus {
 
 @media (max-width: 1100px) {
   .sanaApp {
-    grid-template-columns: 332px minmax(0, 1fr);
+    grid-template-columns: var(--control-panel-width, 332px) 12px minmax(0, 1fr);
   }
 
   .labHeader {
-    grid-template-columns: 284px minmax(0, 1fr);
+    grid-template-columns: 348px minmax(0, 1fr);
   }
 
   .labBrand h1 {
@@ -669,6 +995,11 @@ select:focus {
 
   .labBrand span {
     font-size: 8px;
+  }
+
+  .brandLogo {
+    height: 56px;
+    width: 348px;
   }
 }
 
@@ -687,6 +1018,14 @@ select:focus {
 
   .labHeader {
     grid-template-columns: 1fr;
+  }
+
+  .headerStatus {
+    flex-wrap: wrap;
+  }
+
+  .panelResizeHandle {
+    display: none;
   }
 
   .controlPanel {

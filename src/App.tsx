@@ -1,14 +1,18 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, type PointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SanaStreamingModel } from "@reactor-models/sana-streaming";
 import {
   ExternalLink,
   Eye,
   EyeOff,
+  Github,
   KeyRound,
   Loader2,
   Maximize2,
   MonitorUp,
+  Pencil,
   Play,
+  Plus,
+  Save,
   Square,
   Trash2,
 } from "lucide-react";
@@ -16,14 +20,26 @@ import {
 type StreamAction = "idle" | "busy" | "ready" | "error";
 
 type PromptPreset = {
+  anchorInterval: number;
   id: string;
   label: string;
   prompt: string;
+  seed: number;
+};
+
+type SavedPrompt = {
+  anchorInterval: number;
+  id: string;
+  name: string;
+  prompt: string;
+  seed: number;
+  updatedAt: number;
 };
 
 type DetachedControlsApi = {
   applyPrompt: () => void;
   chooseCapture: () => void;
+  choosePromptById: (promptId: string) => void;
   choosePreset: (preset: PromptPreset) => void;
   connect: () => void;
   detachOutput: () => void;
@@ -46,80 +62,133 @@ type DetachedControlsState = {
   normalizedReady: boolean;
   outputLive: boolean;
   prompt: string;
+  promptChoices: PromptPreset[];
   seed: number;
   sourceResolution: string;
   started: boolean;
   status: string;
 };
 
-const promptGuardrail =
-  "Preserve gameplay readability, camera motion, input timing, HUD placement, silhouettes, interactable objects, and the original scene layout.";
-
 const promptPresets: PromptPreset[] = [
   {
-    id: "faithful-remaster",
-    label: "Faithful Remaster",
-    prompt:
-      `Turn this live game feed into a modern faithful remaster. Upgrade materials, lighting, texture detail, shadows, reflections, and color depth while keeping the level geometry, UI, characters, weapons, crosshair, and gameplay cues in the same places. ${promptGuardrail}`,
+    anchorInterval: 24,
+    id: "moebius",
+    label: "MOEBIUS",
+    prompt: "Detailed Line Drawing. Perfect shading. Masterwork. Pastel Colors. Moebius.",
+    seed: 42,
   },
   {
-    id: "cinematic-realism",
-    label: "Cinematic",
-    prompt:
-      `Transform this gameplay into cinematic live-action footage with realistic materials, lens contrast, filmic exposure, natural light, believable atmosphere, and grounded color grading. Keep the original game composition and timing intact. ${promptGuardrail}`,
+    anchorInterval: 24,
+    id: "demake",
+    label: "DEMAKE",
+    prompt: "Pixelate this game beautifully, like a 16-bit SNES game.",
+    seed: 42,
   },
   {
-    id: "source-engine-film",
-    label: "Source Film",
-    prompt:
-      `Reinterpret this Source-engine-style gameplay as a high-budget grounded sci-fi film. Keep the industrial layout, readable corridors, weapons, props, portals, hazards, and player viewpoint stable, but add photographic lighting, concrete texture, glass, metal, dust, and practical set detail. ${promptGuardrail}`,
-  },
-  {
-    id: "anime-cel",
-    label: "Anime Cel",
-    prompt:
-      `Restyle this game feed as crisp anime cel animation with clean linework, expressive color blocking, soft painted backgrounds, readable effects, and stable character silhouettes. Keep the camera, HUD, reticle, projectiles, and level layout aligned with the source gameplay. ${promptGuardrail}`,
-  },
-  {
-    id: "graphic-novel",
-    label: "Graphic Novel",
-    prompt:
-      `Render this live gameplay like a graphic novel panel in motion: inked edges, confident shadows, selective halftone texture, controlled contrast, and dramatic color accents. Do not move HUD elements or invent new geometry. ${promptGuardrail}`,
-  },
-  {
-    id: "clay-render",
-    label: "Clay Render",
-    prompt:
-      `Convert this gameplay into a tactile clay-render diorama with matte surfaces, soft studio lighting, subtle fingerprints, readable props, and miniature-set depth. Keep player motion, collision shapes, UI, enemies, and objectives visually consistent. ${promptGuardrail}`,
-  },
-  {
-    id: "watercolor",
-    label: "Watercolor",
-    prompt:
-      `Style this live game feed as hand-painted watercolor with translucent washes, textured paper, gentle pigment blooms, and softened lighting. Keep high-contrast gameplay information legible and avoid drifting away from the original scene layout. ${promptGuardrail}`,
-  },
-  {
-    id: "retro-box-art",
-    label: "Retro Box Art",
-    prompt:
-      `Make this gameplay look like playable 1990s sci-fi box art: bold airbrushed surfaces, saturated highlights, smoky shadows, dramatic weapon and portal effects, and crisp readable action. Keep the source geometry, camera, UI, and gameplay timing stable. ${promptGuardrail}`,
-  },
-  {
-    id: "low-poly",
-    label: "Low Poly",
-    prompt:
-      `Restyle this live gameplay as a sharp low-poly realtime render with faceted surfaces, chunky readable props, crisp silhouettes, restrained neon rim light, and stable player-facing geometry. Keep HUD elements, reticle, enemies, pickups, traversal paths, and timing aligned with the source. ${promptGuardrail}`,
+    anchorInterval: 24,
+    id: "okami",
+    label: "OKAMI",
+    prompt: "Edit the underlying stream in the Style of Okami, preserving the controllability of the stream.",
+    seed: 42,
   },
 ];
 
 const reactorKeyStorageKey = "sana-game-stream.reactor-key";
 const legacyReactrKeyStorageKey = "sana-game-stream.reactr-key";
+const savedPromptsStorageKey = "rerender.saved-prompts.v2";
+const savedPromptsSchemaStorageKey = "rerender.saved-prompts.schema";
+const savedPromptsSchemaVersion = "default-styles-moebius-demake-okami-1";
+const deletedBasePromptsStorageKey = "rerender.deleted-base-prompts.v2";
+const deletedBasePromptsSchemaStorageKey = "rerender.deleted-base-prompts.schema";
+const deletedBasePromptsSchemaVersion = "default-styles-moebius-demake-okami-1";
 const normalizedInputWidth = 1280;
 const normalizedInputHeight = 720;
 const normalizedInputFps = 30;
 const reactorKeyUrl = "https://www.reactor.inc/dashboard";
+const githubUrl = "https://github.com/hmprt/rerender";
+const xUrl = "https://x.com/npceo_";
 const outputPopoutUrl = "/popout-output.html";
 const controlsPopoutUrl = "/popout-controls.html";
+const controlPanelWidthStorageKey = "rerender.control-panel-width";
+const minControlPanelWidth = 300;
+const maxControlPanelWidth = 520;
+const minStageWidth = 520;
+const maxSeed = 999_999_999;
+const anchorChunkStep = 4;
+const anchorChunkMax = 96;
+const basePromptRecords: SavedPrompt[] = promptPresets.map((preset) => ({
+  anchorInterval: preset.anchorInterval,
+  id: preset.id,
+  name: preset.label,
+  prompt: preset.prompt,
+  seed: preset.seed,
+  updatedAt: 0,
+}));
+const basePromptIds = new Set(basePromptRecords.map((preset) => preset.id));
+
+function readSavedPrompts() {
+  if (window.localStorage.getItem(savedPromptsSchemaStorageKey) !== savedPromptsSchemaVersion) return [];
+
+  const stored = window.localStorage.getItem(savedPromptsStorageKey);
+  if (!stored) return [];
+
+  try {
+    const parsed = JSON.parse(stored) as SavedPrompt[];
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed
+      .filter(
+        (item): item is SavedPrompt =>
+          typeof item?.id === "string" &&
+          typeof item.name === "string" &&
+          typeof item.prompt === "string" &&
+          typeof item.seed === "number" &&
+          typeof item.anchorInterval === "number" &&
+          typeof item.updatedAt === "number",
+      )
+      .slice(0, 30);
+  } catch {
+    return [];
+  }
+}
+
+function readDeletedBasePromptIds() {
+  if (window.localStorage.getItem(deletedBasePromptsSchemaStorageKey) !== deletedBasePromptsSchemaVersion) {
+    return [];
+  }
+
+  const stored = window.localStorage.getItem(deletedBasePromptsStorageKey);
+  if (!stored) return [];
+
+  try {
+    const parsed = JSON.parse(stored) as string[];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((id) => typeof id === "string" && basePromptIds.has(id));
+  } catch {
+    return [];
+  }
+}
+
+function makeSavedPromptId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return `prompt-${Date.now()}`;
+}
+
+function clampControlPanelWidth(width: number, viewportWidth = window.innerWidth) {
+  const viewportMax = Math.max(minControlPanelWidth, Math.min(maxControlPanelWidth, viewportWidth - minStageWidth));
+  return Math.round(Math.min(viewportMax, Math.max(minControlPanelWidth, width)));
+}
+
+function readControlPanelWidth() {
+  const stored = Number(window.localStorage.getItem(controlPanelWidthStorageKey));
+  return clampControlPanelWidth(Number.isFinite(stored) && stored > 0 ? stored : 348);
+}
+
+function snapAnchorChunks(value: number) {
+  const finiteValue = Number.isFinite(value) ? value : 0;
+  const snapped = Math.round(finiteValue / anchorChunkStep) * anchorChunkStep;
+  return Math.min(anchorChunkMax, Math.max(0, snapped));
+}
 
 async function getJwt(apiKey: string) {
   const response = await fetch("/api/reactor/token", {
@@ -169,7 +238,7 @@ function writeDetachedOutputWindow(detachedWindow: Window) {
     <!doctype html>
     <html>
       <head>
-        <title>SANA game output</title>
+        <title>Rerender output</title>
         <style>
           html,
           body {
@@ -216,7 +285,7 @@ function writeDetachedOutputWindow(detachedWindow: Window) {
       </head>
       <body>
         <header>
-          <strong>SANA Game Output</strong>
+          <strong>Rerender Output</strong>
           <span>Resize this window freely</span>
         </header>
         <video id="sana-output-video" autoplay muted playsinline></video>
@@ -259,7 +328,7 @@ function writeDetachedControlsWindow(detachedWindow: Window) {
     <!doctype html>
     <html>
       <head>
-        <title>SANA game controls</title>
+        <title>Rerender controls</title>
         <style>
           html,
           body {
@@ -406,7 +475,7 @@ function writeDetachedControlsWindow(detachedWindow: Window) {
       </head>
       <body>
         <header>
-          <strong>SANA Game Controls</strong>
+          <strong>Rerender Controls</strong>
           <span id="control-status-line"></span>
         </header>
         <div class="controlBar">
@@ -450,8 +519,7 @@ function bindDetachedControlsWindow(detachedWindow: Window, apiRef: { current: D
       .composedPath()
       .map((item) => (item as HTMLElement).dataset?.presetId)
       .find((id): id is string => Boolean(id));
-    const preset = promptPresets.find((item) => item.id === presetId);
-    if (preset) apiRef.current.choosePreset(preset);
+    if (presetId) apiRef.current.choosePromptById(presetId);
   });
 
   doc.getElementById("control-seed")?.addEventListener("change", (event) => {
@@ -526,7 +594,7 @@ function renderDetachedControlsWindow(detachedWindow: Window | null, state: Deta
   const presets = byId<HTMLDivElement>("control-presets");
   if (presets) {
     presets.replaceChildren(
-      ...promptPresets.map((preset) => {
+      ...state.promptChoices.map((preset) => {
         const button = doc.createElement("button");
         button.dataset.presetId = preset.id;
         button.className = state.activePresetId === preset.id ? "active" : "";
@@ -571,9 +639,12 @@ export function App() {
   const startedRef = useRef(false);
   const cameraPublishedRef = useRef(false);
   const lastPromptSentRef = useRef(promptPresets[0].prompt);
+  const promptLibraryInitializedRef = useRef(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const controlsApiRef = useRef<DetachedControlsApi>({
     applyPrompt: () => undefined,
     chooseCapture: () => undefined,
+    choosePromptById: () => undefined,
     choosePreset: () => undefined,
     connect: () => undefined,
     detachOutput: () => undefined,
@@ -596,8 +667,9 @@ export function App() {
   const [outputLive, setOutputLive] = useState(false);
   const [activePresetId, setActivePresetId] = useState(promptPresets[0].id);
   const [prompt, setPrompt] = useState(promptPresets[0].prompt);
-  const [seed, setSeed] = useState(42);
-  const [anchorInterval, setAnchorInterval] = useState(24);
+  const [promptName, setPromptName] = useState(promptPresets[0].label);
+  const [seed, setSeed] = useState(promptPresets[0].seed);
+  const [anchorInterval, setAnchorInterval] = useState(promptPresets[0].anchorInterval);
   const [reactorKey, setReactorKey] = useState(
     () => window.localStorage.getItem(reactorKeyStorageKey) ?? window.localStorage.getItem(legacyReactrKeyStorageKey) ?? "",
   );
@@ -608,13 +680,149 @@ export function App() {
   );
   const [error, setError] = useState<string | null>(null);
   const [events, setEvents] = useState<string[]>([]);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [savedPrompts, setSavedPrompts] = useState<SavedPrompt[]>(readSavedPrompts);
+  const [deletedBasePromptIds, setDeletedBasePromptIds] = useState<string[]>(readDeletedBasePromptIds);
+  const [controlPanelWidth, setControlPanelWidth] = useState(readControlPanelWidth);
 
   const keyReady = reactorKey.trim().length > 0;
   const promptUsage = `${prompt.length} / 1400`;
+  const promptLibrary = useMemo(() => {
+    const savedById = new Map(savedPrompts.map((item) => [item.id, item]));
+    const visibleBasePrompts = basePromptRecords
+      .filter((item) => !deletedBasePromptIds.includes(item.id))
+      .map((item) => savedById.get(item.id) ?? item);
+    const customPrompts = savedPrompts.filter((item) => !basePromptIds.has(item.id));
+    return [...visibleBasePrompts, ...customPrompts].slice(0, 50);
+  }, [deletedBasePromptIds, savedPrompts]);
+  const activePrompt = useMemo(
+    () => promptLibrary.find((item) => item.id === activePresetId) ?? null,
+    [activePresetId, promptLibrary],
+  );
+  const promptChoices = useMemo<PromptPreset[]>(
+    () =>
+      promptLibrary.map((item) => ({
+        anchorInterval: item.anchorInterval,
+        id: item.id,
+        label: item.name,
+        prompt: item.prompt,
+        seed: item.seed,
+      })),
+    [promptLibrary],
+  );
+  const isBasePromptActive = basePromptIds.has(activePresetId);
 
   const addEvent = useCallback((message: string) => {
     setEvents((items) => [message, ...items].slice(0, 8));
   }, []);
+
+  const playClickTick = useCallback(() => {
+    const AudioContextCtor =
+      window.AudioContext ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextCtor) return;
+
+    const context = audioContextRef.current ?? new AudioContextCtor();
+    audioContextRef.current = context;
+    if (context.state === "suspended") void context.resume();
+
+    const oscillator = context.createOscillator();
+    const secondOscillator = context.createOscillator();
+    const gain = context.createGain();
+    const now = context.currentTime;
+    oscillator.type = "triangle";
+    secondOscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(580, now);
+    oscillator.frequency.exponentialRampToValueAtTime(410, now + 0.045);
+    secondOscillator.frequency.setValueAtTime(290, now);
+    secondOscillator.frequency.exponentialRampToValueAtTime(230, now + 0.045);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.032, now + 0.004);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.052);
+    oscillator.connect(gain);
+    secondOscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start(now);
+    secondOscillator.start(now + 0.006);
+    oscillator.stop(now + 0.058);
+    secondOscillator.stop(now + 0.048);
+  }, []);
+
+  const handleUiPointerDownCapture = useCallback(
+    (event: PointerEvent<HTMLElement>) => {
+      const target = event.target as HTMLElement | null;
+      const control = target?.closest("button,a");
+      if (!control) return;
+      if (control instanceof HTMLButtonElement && control.disabled) return;
+      if (control.getAttribute("aria-disabled") === "true") return;
+      playClickTick();
+    },
+    [playClickTick],
+  );
+
+  const appStyle = useMemo(
+    () =>
+      ({
+        "--control-panel-width": `${controlPanelWidth}px`,
+      }) as CSSProperties,
+    [controlPanelWidth],
+  );
+
+  const beginControlPanelResize = useCallback(
+    (event: PointerEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      const handle = event.currentTarget;
+      const startX = event.clientX;
+      const startWidth = controlPanelWidth;
+      handle.setPointerCapture(event.pointerId);
+      document.body.classList.add("resizingControlPanel");
+
+      const resize = (moveEvent: globalThis.PointerEvent) => {
+        setControlPanelWidth(clampControlPanelWidth(startWidth + moveEvent.clientX - startX, window.innerWidth));
+      };
+
+      const stopResize = (upEvent: globalThis.PointerEvent) => {
+        window.removeEventListener("pointermove", resize);
+        window.removeEventListener("pointerup", stopResize);
+        document.body.classList.remove("resizingControlPanel");
+        if (handle.hasPointerCapture(upEvent.pointerId)) handle.releasePointerCapture(upEvent.pointerId);
+      };
+
+      window.addEventListener("pointermove", resize);
+      window.addEventListener("pointerup", stopResize, { once: true });
+    },
+    [controlPanelWidth],
+  );
+
+  useEffect(() => {
+    if (window.localStorage.getItem(savedPromptsSchemaStorageKey) !== savedPromptsSchemaVersion) {
+      window.localStorage.setItem(savedPromptsSchemaStorageKey, savedPromptsSchemaVersion);
+      setSavedPrompts([]);
+      return;
+    }
+
+    window.localStorage.setItem(savedPromptsStorageKey, JSON.stringify(savedPrompts));
+  }, [savedPrompts]);
+
+  useEffect(() => {
+    window.localStorage.setItem(controlPanelWidthStorageKey, String(controlPanelWidth));
+  }, [controlPanelWidth]);
+
+  useEffect(() => {
+    window.localStorage.setItem(deletedBasePromptsSchemaStorageKey, deletedBasePromptsSchemaVersion);
+    window.localStorage.setItem(deletedBasePromptsStorageKey, JSON.stringify(deletedBasePromptIds));
+  }, [deletedBasePromptIds]);
+
+  useEffect(() => {
+    if (promptLibraryInitializedRef.current) return;
+    const initialPrompt = promptLibrary.find((item) => item.id === activePresetId) ?? promptLibrary[0] ?? null;
+    if (!initialPrompt) return;
+    promptLibraryInitializedRef.current = true;
+    setActivePresetId(initialPrompt.id);
+    setPromptName(initialPrompt.name);
+    setPrompt(initialPrompt.prompt);
+    setSeed(initialPrompt.seed);
+    setAnchorInterval(initialPrompt.anchorInterval);
+  }, [activePresetId, promptLibrary]);
 
   useEffect(() => {
     const model = new SanaStreamingModel();
@@ -678,6 +886,8 @@ export function App() {
       if (detachedControlsWindowRef.current && !detachedControlsWindowRef.current.closed) {
         detachedControlsWindowRef.current.close();
       }
+      void audioContextRef.current?.close().catch(() => undefined);
+      audioContextRef.current = null;
     };
   }, [addEvent]);
 
@@ -903,16 +1113,23 @@ export function App() {
     [applyPrompt],
   );
 
-  const choosePreset = useCallback(
-    (preset: PromptPreset) => {
-      updatePrompt(preset.prompt, preset.id, "preset applied");
+  const updateSeed = useCallback(
+    (nextValue: number) => {
+      const nextSeed = Number.isFinite(nextValue) ? Math.min(maxSeed, Math.max(0, Math.round(nextValue))) : 0;
+      setSeed(nextSeed);
+      if (statusRef.current === "ready") {
+        void modelRef.current
+          ?.setSeed({ seed: nextSeed })
+          .then(() => addEvent(`seed: ${nextSeed}`))
+          .catch((reason) => setError(reason instanceof Error ? reason.message : String(reason)));
+      }
     },
-    [updatePrompt],
+    [addEvent],
   );
 
   const updateAnchorInterval = useCallback(
     (nextValue: number) => {
-      const nextInterval = Number.isFinite(nextValue) ? Math.max(0, Math.round(nextValue)) : 0;
+      const nextInterval = snapAnchorChunks(nextValue);
       setAnchorInterval(nextInterval);
       if (statusRef.current === "ready") {
         void modelRef.current
@@ -923,6 +1140,120 @@ export function App() {
     },
     [addEvent],
   );
+
+  const loadPrompt = useCallback(
+    (nextPrompt: SavedPrompt | PromptPreset) => {
+      const nextName = "name" in nextPrompt ? nextPrompt.name : nextPrompt.label;
+      setActivePresetId(nextPrompt.id);
+      setPromptName(nextName);
+      updatePrompt(nextPrompt.prompt, nextPrompt.id, "prompt loaded");
+      updateSeed(nextPrompt.seed);
+      updateAnchorInterval(nextPrompt.anchorInterval);
+    },
+    [updateAnchorInterval, updatePrompt, updateSeed],
+  );
+
+  const choosePreset = useCallback(
+    (preset: PromptPreset) => {
+      loadPrompt(preset);
+    },
+    [loadPrompt],
+  );
+
+  const selectPrompt = useCallback(
+    (nextId: string) => {
+      const nextPrompt = promptLibrary.find((item) => item.id === nextId);
+      if (nextPrompt) loadPrompt(nextPrompt);
+    },
+    [loadPrompt, promptLibrary],
+  );
+
+  const saveCurrentPrompt = useCallback(() => {
+    const now = Date.now();
+    const name = promptName.trim() || activePrompt?.name || "Untitled Prompt";
+    const id = activePrompt ? activePrompt.id : makeSavedPromptId();
+    const nextSavedPrompt: SavedPrompt = {
+      anchorInterval,
+      id,
+      name,
+      prompt,
+      seed,
+      updatedAt: now,
+    };
+
+    setSavedPrompts((items) => {
+      const withoutCurrent = items.filter((item) => item.id !== id);
+      return basePromptIds.has(id) ? [...withoutCurrent, nextSavedPrompt] : [nextSavedPrompt, ...withoutCurrent].slice(0, 50);
+    });
+    setDeletedBasePromptIds((ids) => ids.filter((item) => item !== id));
+    setActivePresetId(id);
+    setPromptName(name);
+    addEvent(activePrompt ? "prompt saved" : "prompt created");
+  }, [activePrompt, addEvent, anchorInterval, prompt, promptName, seed]);
+
+  const createPrompt = useCallback(() => {
+    const id = makeSavedPromptId();
+    const baseName = promptName.trim() || activePrompt?.name || "Untitled Prompt";
+    const name = `${baseName} Copy`;
+    const nextSavedPrompt: SavedPrompt = {
+      anchorInterval,
+      id,
+      name,
+      prompt,
+      seed,
+      updatedAt: Date.now(),
+    };
+
+    setSavedPrompts((items) => [nextSavedPrompt, ...items].slice(0, 50));
+    setActivePresetId(id);
+    setPromptName(name);
+    addEvent("prompt created");
+  }, [activePrompt, addEvent, anchorInterval, prompt, promptName, seed]);
+
+  const renamePrompt = useCallback(() => {
+    if (!activePrompt) return;
+    const name = promptName.trim();
+    if (!name) return;
+    const renamedPrompt: SavedPrompt = {
+      anchorInterval,
+      id: activePrompt.id,
+      name,
+      prompt,
+      seed,
+      updatedAt: Date.now(),
+    };
+
+    setSavedPrompts((items) => {
+      const withoutCurrent = items.filter((item) => item.id !== activePrompt.id);
+      return basePromptIds.has(activePrompt.id) ? [...withoutCurrent, renamedPrompt] : [renamedPrompt, ...withoutCurrent];
+    });
+    setDeletedBasePromptIds((ids) => ids.filter((item) => item !== activePrompt.id));
+    setPromptName(name);
+    addEvent("prompt renamed");
+  }, [activePrompt, addEvent, anchorInterval, prompt, promptName, seed]);
+
+  const deletePrompt = useCallback(() => {
+    if (!activePrompt) return;
+    const deletedId = activePrompt.id;
+    const remainingPrompts = promptLibrary.filter((item) => item.id !== deletedId);
+    const nextPrompt = remainingPrompts[0] ?? null;
+
+    setSavedPrompts((items) => items.filter((item) => item.id !== deletedId));
+    if (basePromptIds.has(deletedId)) {
+      setDeletedBasePromptIds((ids) => (ids.includes(deletedId) ? ids : [...ids, deletedId]));
+    }
+
+    if (nextPrompt) {
+      loadPrompt(nextPrompt);
+    } else {
+      setActivePresetId("custom");
+      setPromptName("Untitled Prompt");
+      updatePrompt("", "custom", "prompt cleared");
+      updateSeed(promptPresets[0].seed);
+      updateAnchorInterval(promptPresets[0].anchorInterval);
+    }
+    addEvent(isBasePromptActive ? "base prompt deleted" : "prompt deleted");
+  }, [activePrompt, addEvent, isBasePromptActive, loadPrompt, promptLibrary, updateAnchorInterval, updatePrompt, updateSeed]);
 
   const detachOutput = useCallback(() => {
     const detachedWindow = window.open(
@@ -963,6 +1294,7 @@ export function App() {
       normalizedReady,
       outputLive,
       prompt,
+      promptChoices,
       seed,
       sourceResolution,
       started,
@@ -979,6 +1311,7 @@ export function App() {
       normalizedReady,
       outputLive,
       prompt,
+      promptChoices,
       seed,
       sourceResolution,
       started,
@@ -989,15 +1322,19 @@ export function App() {
   controlsApiRef.current = {
     applyPrompt: () => void applyPrompt(prompt, "prompt reapplied", true),
     chooseCapture: () => void chooseCapture(),
+    choosePromptById: (promptId: string) => {
+      const preset = promptChoices.find((item) => item.id === promptId);
+      if (preset) choosePreset(preset);
+    },
     choosePreset,
     connect: () => void connect(),
     detachOutput,
     disconnect: () => void disconnect(),
     reset: () => void reset(),
     setPrompt: (nextPrompt: string) => {
-      updatePrompt(nextPrompt);
+      updatePrompt(nextPrompt, activePresetId);
     },
-    setSeed,
+    setSeed: updateSeed,
     start: () => void start(),
     updateAnchorInterval,
   };
@@ -1046,28 +1383,34 @@ export function App() {
   }, [addEvent, detachedControlsState]);
 
   const keyLabel = keyReady ? "Reactor key ready" : "Add Reactor key";
-  const sourceLabel = capturing ? "Change Capture" : "Capture Game";
+  const sourceLabel = capturing ? "Change Input Source" : "Select Input Source";
   const startLabel = action === "busy" ? "Starting Stream" : started ? "Restart Stream" : "Start Stream";
 
   return (
-    <main className="sanaApp">
+    <main className="sanaApp" onPointerDownCapture={handleUiPointerDownCapture} style={appStyle}>
       <header className="labHeader">
         <div className="labBrand">
-          <div className="labMark" aria-hidden="true">
-            {Array.from({ length: 9 }).map((_, index) => (
-            <span key={index} />
-          ))}
+          <img className="brandLogo" src="/rerender-logo.svg" alt="rerender.app - Powered by Reactor" />
+          <h1 className="srOnly">rerender.app</h1>
         </div>
-        <div>
-          <h1>Neon Chunk Lab</h1>
-          <span>Real-time style transfer</span>
-        </div>
-      </div>
         <div className={`headerStatus ${error ? "error" : status}`}>
+          <nav className="socialLinks" aria-label="Project links">
+            <a aria-label="Open Rerender on GitHub" className="iconLink" href={githubUrl} rel="noreferrer" target="_blank">
+              <Github size={15} />
+            </a>
+            <a aria-label="Open X profile" className="iconLink xIconLink" href={xUrl} rel="noreferrer" target="_blank">
+              <svg aria-hidden="true" className="xLogo" viewBox="0 0 24 24">
+                <path
+                  d="M18.9 1.15h3.68l-8.04 9.19L24 22.85h-7.41l-5.8-7.58-6.63 7.58H.47l8.6-9.83L0 1.15h7.59l5.24 6.93 6.07-6.93Zm-1.29 19.49h2.04L6.49 3.24H4.3l13.31 17.4Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </a>
+          </nav>
           <span title={error ?? undefined}>{error ? "error" : status}</span>
           <button
             aria-expanded={keyPopoverOpen}
-            className="keyTrigger"
+            className={`keyTrigger ${keyReady ? "keyReady" : "keyMissing"}`}
             onClick={() => setKeyPopoverOpen((open) => !open)}
             type="button"
           >
@@ -1121,29 +1464,100 @@ export function App() {
 
       <aside className="controlPanel">
         <section className="panelBlock styleBlock" aria-label="Style">
-          <h2>Style</h2>
-          <label className="field">
-            <span>Preset</span>
-            <select
-              onChange={(event) => {
-                const preset = promptPresets.find((item) => item.id === event.target.value);
-                if (preset) choosePreset(preset);
-              }}
-              value={activePresetId}
+          <div className="blockTitleRow">
+            <h2>Style</h2>
+            <button
+              aria-expanded={helpOpen}
+              className="helpTrigger"
+              onClick={() => setHelpOpen((open) => !open)}
+              type="button"
             >
-              {promptPresets.map((preset) => (
-                <option key={preset.id} value={preset.id}>
-                  {preset.label}
-                </option>
-              ))}
-            </select>
-          </label>
+              [ Help ]
+            </button>
+            {helpOpen && (
+              <section className="helpPopover" aria-label="SANA 2 prompting guidelines">
+                <strong>SANA 2 prompting</strong>
+                <p>
+                  Start with what should remain stable, then describe the target look. For game streams, name the
+                  gameplay invariants directly: camera motion, HUD, reticle, silhouettes, weapons, UI, traversal paths,
+                  timing, and interactable objects.
+                </p>
+                <p>
+                  Use concrete visual nouns instead of mood alone: materials, lighting, lens, texture, color grade,
+                  atmosphere, edge style, and render medium. Keep one dominant style per prompt, then add a short
+                  preservation clause. Avoid asking for new geometry, different characters, or composition changes unless
+                  you want drift.
+                </p>
+                <p>
+                  If output flickers, make the prompt more faithful and raise anchor chunks. If it feels too conservative,
+                  lower anchor chunks or make the style language more specific.
+                </p>
+              </section>
+            )}
+          </div>
+          <section className="promptLibrary" aria-label="Prompts">
+            <div className="libraryTopline">
+              <span>Prompts</span>
+              <span>{promptLibrary.length}</span>
+            </div>
+            <label className="field libraryField">
+              <span>Current</span>
+              <select
+                aria-label="Select prompt"
+                disabled={promptLibrary.length === 0}
+                onChange={(event) => selectPrompt(event.target.value)}
+                value={activePrompt ? activePresetId : ""}
+              >
+                {promptLibrary.length === 0 ? (
+                  <option value="">No prompts</option>
+                ) : (
+                  <>
+                    <option disabled value="">
+                      Choose prompt
+                    </option>
+                    {promptLibrary.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </>
+                )}
+              </select>
+            </label>
+            <label className="field libraryField">
+              <span>Name</span>
+              <input
+                aria-label="Prompt name"
+                onChange={(event) => setPromptName(event.target.value)}
+                placeholder="Prompt name"
+                value={promptName}
+              />
+            </label>
+            <div className="libraryActions">
+              <button disabled={!prompt.trim()} onClick={saveCurrentPrompt} type="button">
+                <Save size={14} />
+                Save
+              </button>
+              <button disabled={!prompt.trim()} onClick={createPrompt} type="button">
+                <Plus size={14} />
+                New
+              </button>
+              <button disabled={!activePrompt || !promptName.trim()} onClick={renamePrompt} type="button">
+                <Pencil size={14} />
+                Rename
+              </button>
+              <button disabled={!activePrompt} onClick={deletePrompt} type="button">
+                <Trash2 size={14} />
+                Delete
+              </button>
+            </div>
+          </section>
           <label className="field promptField">
             <span>Prompt</span>
             <textarea
               maxLength={1400}
               onChange={(event) => {
-                updatePrompt(event.target.value);
+                updatePrompt(event.target.value, activePresetId);
               }}
               value={prompt}
             />
@@ -1158,23 +1572,50 @@ export function App() {
 
         <section className="panelBlock settingsBlock" aria-label="Settings">
           <h2>Settings</h2>
-          <div className="row tuningRow">
-            <label className="field small">
+          <div className="sliderStack">
+            <label className="field seedInputField">
               <span>Seed</span>
-              <input min={0} onChange={(event) => setSeed(Number(event.target.value))} type="number" value={seed} />
+              <input
+                inputMode="numeric"
+                max={maxSeed}
+                min={0}
+                onChange={(event) => updateSeed(Number(event.target.value))}
+                type="number"
+                value={seed}
+              />
             </label>
-            <label className="field small">
-              <span>Anchor chunks</span>
+            <label className="sliderField">
+              <span>
+                <span>Anchor chunks</span>
+                <output>{anchorInterval}</output>
+              </span>
               <input
                 min={0}
+                max={anchorChunkMax}
                 onChange={(event) => updateAnchorInterval(Number(event.target.value))}
-                type="number"
+                step={anchorChunkStep}
+                type="range"
                 value={anchorInterval}
               />
             </label>
           </div>
         </section>
       </aside>
+
+      <button
+        aria-label="Resize control panel"
+        aria-orientation="vertical"
+        aria-valuemax={maxControlPanelWidth}
+        aria-valuemin={minControlPanelWidth}
+        aria-valuenow={controlPanelWidth}
+        className="panelResizeHandle"
+        onPointerDown={beginControlPanelResize}
+        role="separator"
+        title="Drag to resize controls"
+        type="button"
+      >
+        <span aria-hidden="true" />
+      </button>
 
       <section className="stage">
         <div className="previewPane inputPreview">
@@ -1185,7 +1626,7 @@ export function App() {
             </span>
             {capturing && (
               <span className="previewTools">
-                <button aria-label="Change capture" onClick={chooseCapture} title="Change capture" type="button">
+                <button aria-label="Change input source" onClick={chooseCapture} title="Change input source" type="button">
                   <MonitorUp size={14} />
                 </button>
               </span>

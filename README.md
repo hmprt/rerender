@@ -1,6 +1,8 @@
-# SANA Game Stream
+# Rerender
 
-Bare-bones standalone app for live SANA style transfer over game footage.
+Bare-bones standalone app for live SANA style transfer over game footage. Powered by Reactor.
+
+Repo: `https://github.com/hmprt/rerender`
 
 ## Run
 
@@ -18,13 +20,26 @@ The app sends the key to its local token broker at `/api/reactor/token`; it does
 - `src/App.tsx` is the standalone streaming UI.
 - `server/index.ts` is the dedicated token broker and production static server.
 - Vite proxies `/api` to the local server in development.
+- `functions/api/reactor/token.js` is the Cloudflare Pages Function used in production.
 
-## Naming Shortlist
+## Deploy
 
-- **SANA Game Stream**: descriptive working name, low risk while the repo is still forming.
-- **Game Repaint**: clear user promise, good for demos and search.
-- **Playstyle Studio**: friendly, broader than one model.
-- **Shadercast**: game-native feel, streaming-forward.
-- **Screenstyle**: generic but memorable, works beyond games.
+```bash
+npm run deploy
+```
 
-Domain availability still needs a registrar check before we commit to one.
+The Cloudflare Pages project is `rerender`, with `dist` as the build output. The included GitHub Actions workflow redeploys on pushes to `main` once the repository has these GitHub secrets:
+
+- `CLOUDFLARE_ACCOUNT_ID`
+- `CLOUDFLARE_API_TOKEN`
+
+Production is deployed at `https://rerender.pages.dev`.
+
+To put the custom domain live, add these proxied DNS records in the `rerender.app` Cloudflare zone:
+
+- `CNAME @ -> rerender.pages.dev`
+- `CNAME www -> rerender.pages.dev`
+
+The Pages middleware redirects `www.rerender.app` to `rerender.app` with a `301` while preserving path/query.
+
+Cloudflare Web Analytics can be enabled from the Pages project dashboard under Metrics. Pages will inject the beacon on the next deployment.

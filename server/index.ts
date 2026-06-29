@@ -75,5 +75,5 @@ if (fs.existsSync(distDir)) {
 }
 
 app.listen(port, () => {
-  console.log(`SANA Game Stream server listening on http://localhost:${port}`);
+  console.log(`Rerender server listening on http://localhost:${port}`);
 });

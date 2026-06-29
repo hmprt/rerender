@@ -1,5 +1,5 @@
 {
-  "name": "sana-game-stream",
+  "name": "rerender",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -8,6 +8,9 @@
     "dev:client": "vite --host 0.0.0.0",
     "dev:server": "tsx watch server/index.ts",
     "build": "tsc && vite build",
+    "deploy": "npm run build && npx wrangler@4.105.0 pages deploy dist --project-name rerender --branch main",
+    "deploy:dirty": "npm run build && npx wrangler@4.105.0 pages deploy dist --project-name rerender --branch main --commit-dirty=true",
+    "pages:dev": "npm run build && npx wrangler@4.105.0 pages dev dist",
     "start": "tsx server/index.ts"
   },
   "dependencies": {
